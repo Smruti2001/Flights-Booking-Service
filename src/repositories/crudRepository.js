@@ -1,4 +1,4 @@
-const AppError = require("../utils/errors/AppError");
+const AppError = require("../utils/errors/appError");
 const { StatusCodes } = require("http-status-codes");
 
 class CrudRepository {
@@ -18,7 +18,7 @@ class CrudRepository {
             }
         });
         if (!response) {
-            throw new AppError([`Could not find the resource with id: ${data}`], StatusCodes.NOT_FOUND);
+            throw new AppError
         }
         return response;
     }

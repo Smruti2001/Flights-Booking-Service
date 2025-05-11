@@ -1,3 +1,24 @@
+const { StatusCodes } = require('http-status-codes');
+
+const { ErrorResponse, SuccessResponse } = require('../utils/common');
+const { BookingService } = require('../services');
+
+async function createBooking(req, res) {
+    try {
+        const booking = await BookingService.createBooking({
+            flightId: req.body.flightId,
+            noOfSeats: req.body.noOfSeats,
+            userId: req.body.userId
+        });
+        SuccessResponse.message = 'Successfully created a booking';
+        SuccessResponse.data = booking;
+        return res.status(StatusCodes.OK).json(SuccessResponse);
+    } catch (error) {
+        ErrorResponse.error = error;
+        return res.status(error.statusCode).json(ErrorResponse);
+    }
+}
+
 module.exports = {
-    
+    createBooking
 }
