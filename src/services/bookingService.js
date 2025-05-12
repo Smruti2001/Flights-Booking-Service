@@ -6,6 +6,8 @@ const AppError = require('../utils/errors/appError');
 const db = require('../models');
 const BookingRepository = require('../repositories/bookingRepository');
 const bookingrepository = new BookingRepository();
+const { Enums } = require('../utils/common');
+const { BOOKED, CANCELLED } = Enums.BOOKING_STATUS;
 
 async function createBooking(data) {
     const transaction = await db.sequelize.transaction(); 
@@ -32,6 +34,34 @@ async function createBooking(data) {
     }
 }
 
+async function makePayment(data) {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const booking = await bookingrepository.get(data.bookingId, transaction);
+        const bookingTime = new Date(booking.createdAt);
+        const currentTime = new Date();
+
+        if(currentTime - bookingTime > 300000) {
+            await bookingrepository.update(data.bookingId, { status: CANCELLED }, transaction);
+            throw new AppError(['Booking expired'], StatusCodes.BAD_REQUEST);
+        }
+        if(booking.totalCost != data.totalCost) {
+            throw new AppError(['The amount of payment doesnt match'], StatusCodes.BAD_REQUEST);
+        }
+        if(booking.userId != data.userId) {
+            throw new AppError(['The userId doesnt match'], StatusCodes.BAD_REQUEST);
+        }
+
+        // We'll assume here that the Payment has been successfull
+        await bookingrepository.update(data.bookingId, { status: BOOKED }, transaction);
+        transaction.commit();
+    } catch (error) {
+        await transaction.rollback();
+        throw error; // Need to handle errors other than the one explicitly thrown above
+    }
+}
+
 module.exports = {
-    createBooking
+    createBooking,
+    makePayment
 }
