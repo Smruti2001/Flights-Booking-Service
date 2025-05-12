@@ -81,7 +81,20 @@ async function cancelBooking(bookingId) {
     }
 }
 
+async function cancelOldBookings() {
+    try {
+        const currentTime = new Date(Date.now() - 300000); // 5 mins before current time
+        const response = await bookingrepository.cancelOldBookings(currentTime);
+        // TODO: After cancelling the booking make available the cancelled seats for booking. 
+        // Basically call the updateSeats API to update the cancelled seats
+        return response;
+    } catch (error) {
+        throw error; // Need to handle errors other than the one explicitly thrown above
+    }
+}
+
 module.exports = {
     createBooking,
-    makePayment
+    makePayment,
+    cancelOldBookings
 }
