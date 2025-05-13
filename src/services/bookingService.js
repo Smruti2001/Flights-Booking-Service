@@ -69,7 +69,7 @@ async function cancelBooking(bookingId) {
             await transaction.commit();
             return true;
         }
-        await bookingrepository.update(bookingId, { status: CANCELLED }, transaction);
+        const response = await bookingrepository.update(bookingId, { status: CANCELLED }, transaction);
         await axios.patch(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flight/${booking.flightId}/seats`, {
             seats: booking.noOfSeats,
             dec: 0

@@ -1,7 +1,7 @@
 const express = require('express');
 const { ServerConfig, Logger } = require('./config');
 const apiRouter = require('./routes');
-const scheduleCrons = require('./utils/common/cronJobs');
+const executeCron = require('./utils/common/cronJobs');
 
 const app = express();
 
@@ -12,5 +12,5 @@ app.use('/api', apiRouter);
 app.listen(ServerConfig.PORT, () => {
     console.log(`Server started at PORT: ${ServerConfig.PORT}`);
     Logger.info('This is a test info log to check the working of logging mechanism');
-    scheduleCrons();
+    executeCron.start();
 })
