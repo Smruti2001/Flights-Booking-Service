@@ -1,11 +1,13 @@
 'use strict';
-const { Enums } = require('../utils/common');
-const { INITIATED, BOOKED, PENDING, CANCELLED } = Enums.BOOKING_STATUS;
 const {
   Model
 } = require('sequelize');
+
+const { Enums } = require('../utils/common');
+const { RESERVED, BOOKED, CANCELLED } = Enums.SEAT_STATUS;
+
 module.exports = (sequelize, DataTypes) => {
-  class Booking extends Model {
+  class FlightSeatReservation extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,39 +15,41 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      this.hasMany(models.FlightSeatReservation, {
+      this.belongsTo(models.Booking, {
         foreignKey: 'bookingId',
         onDelete: 'CASCADE'
-      })
+      });
     }
   }
-  Booking.init({
+  FlightSeatReservation.init({
+    bookingId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
     flightId: {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    userId: {
+    seatId: {
       type: DataTypes.INTEGER,
       allowNull: false
     },
     status: {
       type: DataTypes.ENUM,
-      values: [INITIATED, BOOKED, PENDING, CANCELLED],
-      defaultValue: INITIATED,
-      allowNull: false
-    },
-    noOfSeats: {
-      type: DataTypes.INTEGER,
-      defaultValue: 1,
-      allowNull: false
-    },
-    totalCost: {
-      type: DataTypes.INTEGER,
+      values: [RESERVED, BOOKED, CANCELLED],
+      defaultValue: RESERVED,
       allowNull: false
     }
   }, {
     sequelize,
-    modelName: 'Booking',
+    modelName: 'FlightSeatReservation',
+    indexes: [
+      {
+        unique: true,
+        fields: ['flightId', 'seatId'],
+        name: 'unique_flight_seat'
+      }
+    ]
   });
-  return Booking;
+  return FlightSeatReservation;
 };

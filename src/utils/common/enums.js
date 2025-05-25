@@ -12,7 +12,14 @@ const BOOKING_STATUS = {
     CANCELLED: 'cancelled'
 }
 
+const SEAT_STATUS = {
+    RESERVED: 'reserved',
+    BOOKED: 'booked',
+    CANCELLED: 'cancelled'
+}
+
 module.exports = {
     SEAT_TYPE,
-    BOOKING_STATUS
+    BOOKING_STATUS,
+    SEAT_STATUS
 }

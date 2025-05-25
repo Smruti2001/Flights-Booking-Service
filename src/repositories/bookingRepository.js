@@ -25,43 +25,43 @@ class BookingRepository extends CrudRepository {
     }
 
     async update(id, data, transaction) {
-        const response = await this.model.update(data, {
+        const response = await Booking.update(data, {
             where: {
                 id: id
             }
         }, { transaction: transaction });
 
-        if(response[0] == 0) {
-            throw new AppError([`Could not find the resource with id: ${data}`], StatusCodes.NOT_FOUND);
+        if (response[0] == 0) {
+            throw new AppError([`Could not find the resource with id: ${id}`], StatusCodes.NOT_FOUND);
         }
 
         return response;
     }
 
-    async cancelOldBookings(timestamp) {
-        const response = await Booking.update({ status: CANCELLED }, {
+    async cancelOldBookings(timestamp, transaction) {
+        const bookings = await Booking.findAll({
             where: {
-                [Op.and]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: timestamp
-                        }
-                    },
-                    {
-                        status: {
-                            [Op.ne]: BOOKED
-                        }
-                    },
-                    {
-                        status: {
-                            [Op.ne]: CANCELLED
-                        }
-                    }
-                ]
-            }
-        })
+                createdAt: { [Op.lt]: timestamp },
+                status: { [Op.notIn]: [BOOKED, CANCELLED] }
+            },
+            transaction: transaction
+        });
 
-        return response;
+        const bookingIds = bookings.map(booking => booking.id);
+
+        if (bookingIds.length > 0) {
+            await Booking.update(
+                { status: CANCELLED },
+                {
+                    where: {
+                        id: { [Op.in]: bookingIds }
+                    },
+                    transaction: transaction
+                }
+            );
+        }
+
+        return bookingIds;
     }
 }
 

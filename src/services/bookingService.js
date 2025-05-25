@@ -5,7 +5,9 @@ const { ServerConfig, Queue } = require('../config');
 const AppError = require('../utils/errors/appError');
 const db = require('../models');
 const BookingRepository = require('../repositories/bookingRepository');
+const SeatBookingRepository = require('../repositories/seatBookingRepository');
 const bookingrepository = new BookingRepository();
+const seatBookingrepository = new SeatBookingRepository();
 const { Enums } = require('../utils/common');
 const { BOOKED, CANCELLED } = Enums.BOOKING_STATUS;
 
@@ -21,7 +23,11 @@ async function createBooking(data) {
         const totalBillingAmount = data.noOfSeats * flightData.price;
         const bookingPayload = { ...data, totalCost: totalBillingAmount };
         const booking = await bookingrepository.create(bookingPayload, transaction);
-
+        const seatBooking = await seatBookingrepository.create({
+            bookingId: booking.id,
+            flightId: data.flightId,
+            seatId: data.seatId
+        }, transaction);
         await axios.patch(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flight/${data.flightId}/seats`, {
             seats: data.noOfSeats
         });
@@ -29,6 +35,7 @@ async function createBooking(data) {
         await transaction.commit();
         return booking;
     } catch (error) {
+        console.log('Error from createBooking', error);
         await transaction.rollback();
         throw error; // Need to handle errors other than the one explicitly thrown above
     }
@@ -75,7 +82,8 @@ async function cancelBooking(bookingId) {
             await transaction.commit();
             return true;
         }
-        const response = await bookingrepository.update(bookingId, { status: CANCELLED }, transaction);
+        await bookingrepository.update(bookingId, { status: CANCELLED }, transaction);
+        await seatBookingrepository.update(bookingId, { status: Enums.SEAT_STATUS.CANCELLED }, transaction);
         await axios.patch(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flight/${booking.flightId}/seats`, {
             seats: booking.noOfSeats,
             dec: 0
@@ -88,13 +96,20 @@ async function cancelBooking(bookingId) {
 }
 
 async function cancelOldBookings() {
+    const transaction = await db.sequelize.transaction();
     try {
         const currentTime = new Date(Date.now() - 300000); // 5 mins before current time
-        const response = await bookingrepository.cancelOldBookings(currentTime);
+        const bookingIds = await bookingrepository.cancelOldBookings(currentTime, transaction);
+        const seatBookings = await seatBookingrepository.cancelOldSeatBookings(bookingIds, transaction);
+        console.log('seatBookings', seatBookings);
+        // After this group the seatBookingData as {flightId: {seatCount: , seatIds: []}} 
+        // then call the update function to make the seats available for booking
         // TODO: After cancelling the booking make available the cancelled seats for booking. 
         // Basically call the updateSeats API to update the cancelled seats
-        return response;
+        await transaction.commit();
+        return seatBookings;
     } catch (error) {
+        await transaction.rollback();
         throw error; // Need to handle errors other than the one explicitly thrown above
     }
 }
